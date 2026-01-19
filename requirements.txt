@@ -1,2 +1,5 @@
-streamlit
+streamlit~=1.53.0
 google-genai
+google~=3.0.0
+protobuf~=5.29.5
+pillow~=12.1.0

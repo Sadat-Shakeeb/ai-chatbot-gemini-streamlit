@@ -1,151 +1,174 @@
 import streamlit as st
 from google import genai
-import os
-
-# ---------------------------------------
-# Page config
-# ---------------------------------------
-st.set_page_config(page_title="Gemini Chatbot", layout="wide")
-
-
+from PIL import Image
+import time
 
 
 # ---------------------------------------
-# Gemini client initialization
+# 1. Performance & Config
 # ---------------------------------------
-# Use the key you just verified
-API_KEY = st.secrets["GOOGLE_API_KEY"]
+@st.cache_resource
+def get_gemini_client(api_key):
+    return genai.Client(api_key=api_key)
 
-# Initialize standard client (No v1beta forced)
-client = genai.Client(api_key=API_KEY)
 
-# Use the ID that we found in your test script
+st.set_page_config(page_title="Gemini AI Partner | Shakeeb", layout="wide", page_icon="🚀")
+
+# ---------------------------------------
+# 2. Secure API Key Check
+# ---------------------------------------
+try:
+    API_KEY = st.secrets["GOOGLE_API_KEY"]
+    client = get_gemini_client(API_KEY)
+except KeyError:
+    st.error("Please set GOOGLE_API_KEY in Streamlit Secrets.")
+    st.stop()
+
 MODEL_NAME = "models/gemini-2.5-flash"
 
-# Optional: Add a quick check to the UI
-if "connection_verified" not in st.session_state:
-    try:
-        client.models.get(model=MODEL_NAME)
-        st.session_state.connection_verified = True
-    except Exception as e:
-        st.error(f"Failed to connect to {MODEL_NAME}: {e}")
-        st.stop()
 
-# ... (the rest of your Streamlit code)
+# ---------------------------------------
+# 3. Helper: Multi-turn streaming with Retry Logic
+# ---------------------------------------
+def stream_gemini_response(user_text, image_data=None):
+    parts = [user_text]
+    if image_data:
+        parts.append(image_data)
 
-# We force 'v1beta' to ensure the latest models like gemini-1.5-flash are found
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            responses = client.models.generate_content_stream(model=MODEL_NAME, contents=parts)
+            for chunk in responses:
+                if chunk.text:
+                    yield chunk.text
+            return
+        except Exception as e:
+            if "503" in str(e) and attempt < max_retries - 1:
+                time.sleep(2)
+                continue
+            else:
+                yield f"⚠️ Gemini is busy. Please try again in a moment."
+                break
 
 
 # ---------------------------------------
-# Session state initialization
+# 4. Session State
 # ---------------------------------------
 if "chats" not in st.session_state:
-    st.session_state.chats = [
-        {"name": "New Chat", "id": 1, "messages": []}
-    ]
-
+    st.session_state.chats = [{"name": "First Chat", "id": 1, "messages": []}]
 if "active_chat_id" not in st.session_state:
     st.session_state.active_chat_id = 1
 
+active_chat = next(chat for chat in st.session_state.chats if chat["id"] == st.session_state.active_chat_id)
 
 # ---------------------------------------
-# Helper functions
+# 5. Sidebar: Tools, Navigation & Developer Info
 # ---------------------------------------
-def get_active_chat():
-    return next(
-        chat for chat in st.session_state.chats
-        if chat["id"] == st.session_state.active_chat_id
-    )
+with st.sidebar:
+    st.title("⚙️ Control Center")
 
+    # 📖 User Guide
+    with st.expander("📖 How to use", expanded=False):
+        st.markdown("""
+        1. **Chat:** Type in the box below to start.
+        2. **Vision:** Upload an image for analysis.
+        3. **History:** Switch between chats below.
+        """)
 
-def stream_gemini_response(history):
-    contents = []
-    for msg in history:
-        role = "user" if msg["role"] == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": msg["content"]}]})
+    # 🖼️ Image Upload
+    st.subheader("🖼️ Image Upload")
+    uploaded_file = st.file_uploader("Upload a photo", type=["jpg", "png", "jpeg"])
+    img_preview = None
+    if uploaded_file:
+        img_preview = Image.open(uploaded_file)
+        st.image(img_preview, caption="Image Ready!", use_container_width=True)
+        if st.button("🗑️ Remove Photo"):
+            st.rerun()
 
-    # The call remains the same, but MODEL_NAME now has the prefix
-    responses = client.models.generate_content_stream(
-        model=MODEL_NAME,
-        contents=contents
-    )
+    st.divider()
 
-    for chunk in responses:
-        if chunk.text:
-            yield chunk.text
-
-
-# ---------------------------------------
-# Sidebar – Chat Management
-# ---------------------------------------
-st.sidebar.title("💬 Chat Sessions")
-
-# Create New Chat
-if st.sidebar.button("➕ New Chat", use_container_width=True):
-    new_id = max([c["id"] for c in st.session_state.chats]) + 1
-    st.session_state.chats.append(
-        {"name": f"Chat {new_id}", "id": new_id, "messages": []}
-    )
-    st.session_state.active_chat_id = new_id
-    st.rerun()
-
-st.sidebar.divider()
-
-# List existing chats
-for chat in st.session_state.chats:
-    is_active = chat["id"] == st.session_state.active_chat_id
-    # Use a visually distinct button for the active chat
-    if st.sidebar.button(
-            chat["name"],
-            key=f"chat_{chat['id']}",
-            use_container_width=True,
-            type="primary" if is_active else "secondary"
-    ):
-        st.session_state.active_chat_id = chat["id"]
+    # 💬 Chat Management
+    st.subheader("💬 Conversations")
+    if st.button("➕ Start New Chat", use_container_width=True):
+        new_id = max([c["id"] for c in st.session_state.chats]) + 1
+        st.session_state.chats.append({"name": f"Chat {new_id}", "id": new_id, "messages": []})
+        st.session_state.active_chat_id = new_id
         st.rerun()
 
-st.sidebar.divider()
+    for chat_item in st.session_state.chats:
+        is_active = chat_item["id"] == st.session_state.active_chat_id
+        if st.button(chat_item["name"], key=f"chat_{chat_item['id']}", use_container_width=True,
+                     type="primary" if is_active else "secondary"):
+            st.session_state.active_chat_id = chat_item["id"]
+            st.rerun()
 
-if st.sidebar.button("🗑️ Delete Current Chat", use_container_width=True):
-    if len(st.session_state.chats) > 1:
-        st.session_state.chats = [
-            c for c in st.session_state.chats
-            if c["id"] != st.session_state.active_chat_id
-        ]
-        st.session_state.active_chat_id = st.session_state.chats[0]["id"]
-        st.rerun()
-    else:
-        st.sidebar.warning("At least one chat must exist")
+    st.divider()
+
+    # 👨‍💻 Developer Info (Updated)
+    st.markdown("### 👨‍💻 Developer")
+    st.info("**Shakeeb** \n\n Data Science Enthusiast building AI-driven solutions to simplify everyday tasks.")
+
+    st.link_button("🐙 View My GitHub", "https://github.com/Sadat-Shakeeb", use_container_width=True)
+
+    with st.expander("🛠️ Tech Stack"):
+        st.caption("Engine: Gemini 2.5 Flash")
+        st.caption("Frontend: Streamlit")
+        st.caption("Language: Python 3.12")
 
 # ---------------------------------------
-# Main Chat UI
+# 6. Main UI: Welcome & Chat
 # ---------------------------------------
-chat = get_active_chat()
-st.title(f"Gemini: {chat['name']}")
+if not active_chat["messages"]:
+    st.title("👋 Welcome to Gemini Partner")
+    st.markdown(f"#### Designed by **Shakeeb**")
 
-# Display chat history
-for msg in chat["messages"]:
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.info("**👁️ Vision Analysis**\n\nAnalyze datasets, code, or images for instant insights.")
+    with col2:
+        st.success("**✍️ Creative Content**\n\nDraft documentation or code with high-speed logic.")
+    with col3:
+        st.warning("**🚀 Optimized Speed**\n\nBuilt with retry logic and cached resources for stability.")
+    st.divider()
+else:
+    st.title(f"💬 {active_chat['name']}")
+
+# Display History
+for msg in active_chat["messages"]:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+        if "image" in msg:
+            st.image(msg["image"], width=400)
 
-# User input
-user_input = st.chat_input("Type your message...")
+# Input
+user_input = st.chat_input("Ask Shakeeb's AI anything...")
 
 if user_input:
-    # 1. Add user message to state and UI
-    chat["messages"].append({"role": "user", "content": user_input})
+    user_entry = {"role": "user", "content": user_input}
+    if uploaded_file:
+        user_entry["image"] = img_preview
+    active_chat["messages"].append(user_entry)
+
     with st.chat_message("user"):
         st.markdown(user_input)
+        if uploaded_file:
+            st.image(img_preview, width=400)
 
-    # 2. Generate and stream assistant response
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        full_response = ""
+        full_res = ""
+        with st.spinner("Shakeeb's AI is thinking..."):
+            for token in stream_gemini_response(user_input, img_preview if uploaded_file else None):
+                full_res += token
+                placeholder.markdown(full_res + "▌")
+        placeholder.markdown(full_res)
 
-        # We pass the message history (including the prompt we just added)
-        for token in stream_gemini_response(chat["messages"]):
-            full_response += token
-            placeholder.markdown(full_response)
+    active_chat["messages"].append({"role": "assistant", "content": full_res})
 
-    # 3. Save assistant response to state
-    chat["messages"].append({"role": "assistant", "content": full_response})
+# ---------------------------------------
+# 7. Global Footer
+# ---------------------------------------
+st.markdown("---")
+cols = st.columns([4, 1])
+cols[1].caption("© 2026 Shakeeb")
