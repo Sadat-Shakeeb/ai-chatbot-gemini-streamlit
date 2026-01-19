@@ -1,14 +1,3 @@
-Here is a professional, high-quality `README.md` specifically tailored for your project. I have written it to highlight your role as a **Data Science Enthusiast** and to show off the technical features of the app.
-
-### How to use this:
-
-1. Go to your GitHub repository: `Sadat-Shakeeb/chatbot`.
-2. Click **Add file** > **Create new file**.
-3. Name it `README.md`.
-4. Paste the code below and click **Commit changes**.
-
----
-
 ```markdown
 # 🚀 Gemini AI Partner | Multimodal Chatbot
 
