@@ -1,75 +1,116 @@
 ```markdown
-# 🚀 Gemini AI Partner | Multimodal Chatbot
+# 🚀 Gemini AI Partner — Multimodal Chatbot
 
-A professional, high-performance multimodal AI chatbot built using **Python**, **Streamlit**, and the **Google Gemini 2.5 Flash** model. This application supports real-time text streaming and image analysis (Vision), featuring a polished UI and robust error handling.
+A fast, professional multimodal AI chatbot built with Streamlit and Google Gemini. The app supports real-time streaming text responses and image-based prompts so you can ask the model to describe, analyze, or debug images. It includes robust retry/backoff logic for improved stability when calling the Gemini API.
 
-**🔗 Live Demo:** [ai-chatbot-gemini-app.streamlit.app](https://ai-chatbot-gemini-app.streamlit.app/)
-
----
-
-## ✨ Features
-
-- **Multimodal Intelligence:** Upload images (JPG, PNG, JPEG) and ask the AI to describe, analyze, or debug what it sees.
-- **Real-Time Streaming:** Responses are "yielded" token-by-token for a smooth, conversational experience.
-- **Chat Management:** Create, switch between, and delete multiple chat sessions with persistent session history.
-- **Enterprise-Grade Stability:** Built-in **Exponential Backoff/Retry Logic** to handle 503 (Server Overloaded) errors from the Gemini API.
-- **Optimized Performance:** Uses `@st.cache_resource` for efficient API client management and faster load times.
-- **Clean UI/UX:** Designed with a user-friendly sidebar, onboarding cards, and a professional developer signature.
+🔗 Live Demo: [ai-chatbot-gemini-app.streamlit.app](https://ai-chatbot-gemini-app.streamlit.app/)
 
 ---
 
-## 🛠️ Tech Stack
+## Key features
 
-- **Language:** Python 3.12
-- **AI Model:** Google Gemini 2.5 Flash
-- **Web Framework:** [Streamlit](https://streamlit.io/)
-- **Image Processing:** Pillow (PIL)
-- **API SDK:** `google-genai`
+- Multimodal input: upload images (JPG, PNG, JPEG) and chat about their content
+- Real-time streaming: token-by-token responses for a natural chat experience
+- Multiple chat sessions: create, switch, and delete conversations with persisted history
+- Reliability: exponential backoff & retry handling for API 503 / overloaded responses
+- Performance: cached API client using Streamlit cache utilities for faster startup
+- Simple, developer-friendly UI built with Streamlit
 
 ---
 
-## 🚀 Getting Started
+## Tech stack
 
-### 1. Prerequisites
+- Language: Python (3.10+)
+- AI Model: Google Gemini 2.5 Flash
+- Framework: [Streamlit](https://streamlit.io/)
+- Image handling: Pillow (PIL)
+- SDK: `google-genai`
+
+---
+
+## Prerequisites
+
 - Python 3.10 or higher
-- A Google Gemini API Key (Get it at [AI Studio](https://aistudio.google.com/))
+- A Google Gemini API key (available from AI Studio)
+- Git (to clone repository)
 
-### 2. Installation
-Clone the repository:
+---
+
+## Quick start
+
+1. Clone the repo
 ```bash
-git clone [https://github.com/Sadat-Shakeeb/chatbot.git](https://github.com/Sadat-Shakeeb/chatbot.git)
-cd chatbot
-
+git clone https://github.com/Sadat-Shakeeb/ai-chatbot-gemini-streamlit.git
+cd ai-chatbot-gemini-streamlit
 ```
 
-Install dependencies:
+2. Create and activate a virtual environment (recommended)
+```bash
+python -m venv venv
+# macOS / Linux
+source venv/bin/activate
+# Windows (cmd)
+venv\Scripts\activate
+```
 
+3. Install dependencies
 ```bash
 pip install -r requirements.txt
-
 ```
 
-### 3. Local Configuration
+4. Configure your API key
 
-Create a folder named `.streamlit` and a file inside it called `secrets.toml`:
+Create a directory named `.streamlit` and add a `secrets.toml` file:
 
 ```toml
 # .streamlit/secrets.toml
 GOOGLE_API_KEY = "YOUR_ACTUAL_API_KEY_HERE"
-
 ```
 
-### 4. Run the App
+(Alternatively, you may set the environment variable `GOOGLE_API_KEY` if you prefer not to use Streamlit secrets.)
 
+5. Run the app
 ```bash
 streamlit run app.py
-
 ```
+
+The app will open in your browser. You can also use the Live Demo link above.
 
 ---
 
-## 📄 License
+## Usage tips
 
-This project is open-source. Feel free to fork and build your own versions!
+- Upload an image and then ask the bot to describe or analyze it (e.g., "Describe this image", "What is wrong with this circuit?", "Explain the objects in the photo").
+- Keep prompts clear and concise for best results.
+- If you encounter API rate limits or 503 errors, the app will automatically retry with exponential backoff. If retries fail, check your API quota and key.
 
-```
+---
+
+## Development & contribution
+
+Contributions are welcome. Suggested workflow:
+
+- Fork the repository
+- Create a feature branch
+- Open a pull request with a clear description of changes
+
+Please include tests and keep changes small and focused.
+
+---
+
+## Troubleshooting
+
+- "503 Server Overloaded": The app includes retry/backoff, but frequent 503s may indicate quota or regional throttling—check your Google Cloud / AI Studio usage.
+- Authentication errors: Verify `GOOGLE_API_KEY` is correct and has required permissions.
+- Missing dependencies: Re-run `pip install -r requirements.txt` inside the activated virtual environment.
+
+---
+
+## License
+
+This project is open-source — feel free to fork and adapt for your own use.
+
+---
+- Create a short CONTRIBUTING.md template
+- Add usage screenshots or GIFs for the UI
+``` 
